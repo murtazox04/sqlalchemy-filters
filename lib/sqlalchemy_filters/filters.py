@@ -1,16 +1,14 @@
-from pydantic import BaseModel
-from typing import Any, List, Type
+from typing import Any, List, Type, Dict
+
 from sqlalchemy.future import select
 from sqlalchemy import Column, inspect, or_
 from sqlalchemy.ext.asyncio import AsyncSession
+# from sqlalchemy.sql.expression import cast
 
-from schema import FilterOperator, OrderingField
+from .schema import FilterOperator, OrderingField
 
 
-class FilterSet(BaseModel):
-    class Config:
-        arbitrary_types_allowed = True
-
+class FilterSet:
     model: Type[Any]
     fields: List[str] = []
     exclude: List[str] = []
@@ -18,8 +16,9 @@ class FilterSet(BaseModel):
     ordering_fields: List[str] = []
 
     def __init__(self, **data):
-        super().__init__(**data)
-        self.declared_filters = {}
+        self.declared_filters: Dict[str, FilterOperator] = {}
+        for key, value in data.items():
+            setattr(self, key, value)
         self._populate_filters()
 
     def _populate_filters(self):
@@ -54,10 +53,13 @@ class FilterSet(BaseModel):
 
     async def _apply_filter(self, session: AsyncSession, query, field: str, filter_obj: FilterOperator, value: Any):
         column = self._get_column(field)
-        for op, op_value in value.dict(exclude_unset=True).items():
-            filter_operation = getattr(self, f"filter_{op}", None)
-            if filter_operation:
-                query = await filter_operation(session, query, column, op_value)
+        if isinstance(value, dict):
+            for op, op_value in value.items():
+                filter_operation = getattr(self, f"filter_{op}", None)
+                if filter_operation:
+                    query = await filter_operation(session, query, column, op_value)
+        else:
+            query = await self.filter_eq(session, query, column, value)
         return query
 
     async def filter_eq(self, session: AsyncSession, query, column, value):

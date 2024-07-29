@@ -1,6 +1,6 @@
 import logging
 from pydantic import BaseModel, create_model
-from typing import Any, Dict, List, Optional, Type, Tuple
+from typing import Any, List, Optional, Type, Tuple
 
 from starlette.exceptions import HTTPException
 
@@ -8,10 +8,9 @@ from sqlalchemy import func
 from sqlalchemy.future import select
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.ext.asyncio import AsyncSession
-# from sqlalchemy.orm import InstrumentedAttribute
 
-from filters import FilterSet
-from schema import Pagination, FilterOperator, OrderingField
+from .filters import FilterSet
+from .schema import Pagination
 
 logger = logging.getLogger(__name__)
 
@@ -28,14 +27,45 @@ class FilterConfig:
         self.max_limit = max_limit
 
 
-def create_filter_model(name: str, filter_config: FilterConfig) -> Type[BaseModel]:
-    fields: Dict[str, Any] = {
-        field: (Optional[FilterOperator], None) for field in filter_config.filter_class.fields
-    }
-    fields["search"] = (Optional[str], None)
-    fields["order_by"] = (Optional[List[OrderingField]], None)
+def create_filter_query_params(filter_config):
+    fields = {}
+    filter_instance = filter_config.filter_class()
 
+    for field in filter_instance.fields:
+        fields[f"{field}__eq"] = (Optional[str], None)
+        fields[f"{field}__ne"] = (Optional[str], None)
+        fields[f"{field}__gt"] = (Optional[str], None)
+        fields[f"{field}__ge"] = (Optional[str], None)
+        fields[f"{field}__lt"] = (Optional[str], None)
+        fields[f"{field}__le"] = (Optional[str], None)
+        fields[f"{field}__like"] = (Optional[str], None)
+        fields[f"{field}__ilike"] = (Optional[str], None)
+        fields[f"{field}__in"] = (Optional[List[str]], None)
+        fields[f"{field}__not_in"] = (Optional[List[str]], None)
+        fields[f"{field}__is_null"] = (Optional[bool], None)
+
+    # Add search and order_by fields
+    fields["search"] = (Optional[str], None)
+    fields["order_by"] = (Optional[List[str]], None)
+
+    return fields
+
+
+def create_filter_model(name: str, filter_config) -> Type[BaseModel]:
+    fields = create_filter_query_params(filter_config)
     return create_model(f"{name}FilterModel", **fields)
+
+    # def create_filter_model(name: str, filter_config):
+    #     fields = {}
+    #     filter_instance = filter_config.filter_class()
+    #
+    #     for field in filter_instance.fields:
+    #         fields[field] = (Optional[FilterOperator], None)
+    #
+    #     fields["search"] = (Optional[str], None)
+    #     fields["order_by"] = (Optional[List[OrderingField]], None)
+    #
+    #     return create_model(f"{name}FilterModel", **fields)
 
 
 class GenericFilterService:
