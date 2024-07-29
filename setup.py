@@ -12,6 +12,8 @@ setup(
         'pydantic>=2.8.2',
         'SQLAlchemy>=2.0.31',
         'starlette>=0.37.0,<0.38.0',
+        'pytest>=8.3.0,<8.4.0',
+        'pytest-asyncio>=0.23.0,<0.24.0'
     ],
     python_requires='>=3.6',
     author='Murtazo Khurramov',
