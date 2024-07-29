@@ -11,7 +11,7 @@ setup(
     install_requires=[
         'pydantic>=2.8.2',
         'SQLAlchemy>=2.0.31',
-        'starlette>=0.37.2,<0.38.0',
+        'starlette>=0.37.0,<0.38.0',
     ],
     python_requires='>=3.6',
     author='Murtazo Khurramov',
